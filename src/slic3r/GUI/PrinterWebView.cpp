@@ -104,6 +104,8 @@ PrinterWebView::PrinterWebView(wxWindow *parent)
     , m_zoomFactor(100)
     , m_apikey()
     , m_apikey_sent(false)
+    , m_oauth_token()
+    , m_oauth_token_sent(false)
     , m_url_deferred()
     , m_handler(std::make_unique<PrinterWebViewHandler>(*this))
  {
@@ -169,7 +171,7 @@ PrinterWebView::~PrinterWebView()
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " End";
 }
 
-void PrinterWebView::load_url(wxString& url, wxString apikey)
+void PrinterWebView::load_url(wxString& url, wxString apikey, wxString oauth_token)
 {
 //    this->Show();
 //    this->Raise();
@@ -177,6 +179,8 @@ void PrinterWebView::load_url(wxString& url, wxString apikey)
         return;
     m_apikey = apikey;
     m_apikey_sent = false;
+    m_oauth_token = oauth_token;
+    m_oauth_token_sent = false;
     m_handler = create_printer_webview_handler(*this);
 
     if (this->IsShown()) {
@@ -260,6 +264,42 @@ void PrinterWebView::SendAPIKey()
     m_browser->Reload();
 }
 
+void PrinterWebView::SendOAuthToken()
+{
+    if (m_oauth_token_sent || m_oauth_token.IsEmpty())
+        return;
+    m_oauth_token_sent = true;
+    wxString script = wxString::Format(R"(
+    // Check if window.fetch exists before overriding
+    if (window.fetch) {
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init = {}) {
+            init.headers = init.headers || {};
+            init.headers['Authorization'] = 'Bearer %s';
+            return originalFetch(input, init);
+        };
+    }
+)",
+                                       m_oauth_token);
+    m_browser->RemoveAllUserScripts();
+
+    // RemoveAllUserScripts causes WebView to forget about our script message handler,
+    // so re-add it here.
+    m_browser->RemoveScriptMessageHandler("wx");
+    if (m_browser->AddScriptMessageHandler("wx"))
+        WebView::MarkScriptMessageHandlerAdded(m_browser);
+    else
+        wxLogError("Could not add script message handler");
+
+#ifdef __linux__
+    // Re-inject the vue-resize/WebKitGTK workaround that RemoveAllUserScripts just cleared.
+    inject_vue_resize_workaround(m_browser);
+#endif
+
+    m_browser->AddUserScript(script);
+    m_browser->Reload();
+}
+
 void PrinterWebView::OnError(wxWebViewEvent &evt)
 {
     auto e = "unknown error";
@@ -299,7 +339,8 @@ void PrinterWebView::OnLoaded(wxWebViewEvent& evt)
     //ORCA: url loaded successfully, safe to clear
     m_url_deferred.clear();
     SendAPIKey();
-  
+    SendOAuthToken();
+
     if (m_handler != nullptr) {
         m_handler->on_loaded(evt);
         return;

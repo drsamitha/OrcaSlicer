@@ -56,8 +56,14 @@ public:
     bool is_cloud() const override { return true; }
     std::string get_host() const override { return "https://simplyprint.io"; }
 
-    GUI::OAuthParams get_oauth_params() const;
-    void             save_oauth_credential(const GUI::OAuthResult& cred) const;
+    bool             is_pkce_oauth() const override { return true; }
+    GUI::OAuthParams get_oauth_params() const override;
+    void             save_oauth_credential(const GUI::OAuthResult& cred) const override;
+    std::string      get_access_token() const override
+    {
+        auto it = cred.find("access_token");
+        return it != cred.end() ? it->second : std::string();
+    }
 
     wxString                   get_test_ok_msg() const override;
     wxString                   get_test_failed_msg(wxString& msg) const override;

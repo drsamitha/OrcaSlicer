@@ -1321,8 +1321,9 @@ void MainFrame::init_tabpanel() {
     Bind(EVT_LOAD_PRINTER_URL, [this](LoadPrinterViewEvent &evt) {
         wxString url = evt.GetString();
         wxString key = evt.GetAPIkey();
+        wxString oauth_token = evt.GetOAuthToken();
         //select_tab(MainFrame::tpMonitor);
-        m_printer_view->load_url(url, key);
+        m_printer_view->load_url(url, key, oauth_token);
     });
     m_printer_view->Hide();
 
@@ -1400,8 +1401,9 @@ void MainFrame::show_device(bool should_use_native) {
             Bind(EVT_LOAD_PRINTER_URL, [this](LoadPrinterViewEvent& evt) {
                 wxString url = evt.GetString();
                 wxString key = evt.GetAPIkey();
+                wxString oauth_token = evt.GetOAuthToken();
                 // select_tab(MainFrame::tpMonitor);
-                m_printer_view->load_url(url, key);
+                m_printer_view->load_url(url, key, oauth_token);
             });
         }
 
@@ -1516,8 +1518,9 @@ void MainFrame::show_device(bool should_use_native) {
             Bind(EVT_LOAD_PRINTER_URL, [this](LoadPrinterViewEvent& evt) {
                 wxString url = evt.GetString();
                 wxString key = evt.GetAPIkey();
+                wxString oauth_token = evt.GetOAuthToken();
                 // select_tab(MainFrame::tpMonitor);
-                m_printer_view->load_url(url, key);
+                m_printer_view->load_url(url, key, oauth_token);
             });
         }
         m_printer_view->Show(false);
@@ -4291,12 +4294,13 @@ void MainFrame::load_url(wxString url)
     wxQueueEvent(this, evt);
 }
 
-void MainFrame::load_printer_url(wxString url, wxString apikey)
+void MainFrame::load_printer_url(wxString url, wxString apikey, wxString oauth_token)
 {
     BOOST_LOG_TRIVIAL(trace) << "load_printer_url:" << url;
     auto evt = new LoadPrinterViewEvent(EVT_LOAD_PRINTER_URL, this->GetId());
     evt->SetString(url);
     evt->SetAPIkey(apikey);
+    evt->SetOAuthToken(oauth_token);
     wxQueueEvent(this, evt);
 }
 
@@ -4324,8 +4328,14 @@ void MainFrame::load_printer_url()
     const auto host_type = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type")->value;
     if (cfg.has("printhost_apikey") && host_type != htSimplyPrint)
         apikey = cfg.opt_string("printhost_apikey");
+    wxString oauth_token;
+    if (host_type == htOidc) {
+        std::unique_ptr<PrintHost> host(PrintHost::get_print_host(&cfg));
+        if (host)
+            oauth_token = wxString::FromUTF8(host->get_access_token());
+    }
     if (!url.empty()) {
-        load_printer_url(url, apikey);
+        load_printer_url(url, apikey, oauth_token);
     }
 }
 

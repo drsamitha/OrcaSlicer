@@ -357,7 +357,7 @@ public:
 
     //BBS
     void        load_url(wxString url);
-    void        load_printer_url(wxString url, wxString apikey = "");
+    void        load_printer_url(wxString url, wxString apikey = "", wxString oauth_token = "");
     void        load_printer_url();
     bool        is_printer_view() const;
     void        refresh_plugin_tips();

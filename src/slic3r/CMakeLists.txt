@@ -748,6 +748,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/Obico.hpp
     Utils/OctoPrint.cpp
     Utils/OctoPrint.hpp
+    Utils/OidcPrintHost.cpp
+    Utils/OidcPrintHost.hpp
     Utils/PresetUpdater.cpp
     Utils/PresetUpdater.hpp
     Utils/PrintHost.cpp

@@ -1451,7 +1451,7 @@ static std::vector<std::string> s_Preset_printer_options {
     "nozzle_type", "nozzle_hrc","auxiliary_fan", "fan_direction", "nozzle_volume","upward_compatible_machine", "z_hop_types", "travel_slope", "retract_lift_enforce","support_chamber_temp_control","support_air_filtration","support_cooling_filter","cooling_filter_enabled","printer_structure","farthest_point_timelapse",
     "best_object_pos", "head_wrap_detect_zone",
     "host_type", "print_host", "printhost_apikey", "flashforge_serial_number", "bbl_use_printhost", "printer_agent",
-    "print_host_webui",
+    "print_host_webui", "oidc_scope",
     "printhost_cafile","printhost_port","printhost_authorization_type",
     "printhost_user", "printhost_password", "printhost_ssl_ignore_revoke", "thumbnails", "thumbnails_format",
     "use_relative_e_distances", "extruder_type", "use_firmware_retraction", "printer_notes",
@@ -2596,7 +2596,8 @@ std::pair<Preset*, bool> PresetCollection::load_external_preset(
     keys.erase(std::remove_if(keys.begin(), keys.end(),
                               [](std::string &val) {
                                 return val == "print_host" || val == "print_host_webui" || val == "printhost_apikey" ||
-                                       val == "printhost_cafile" || val == "printhost_user" || val == "printhost_password" || val == "printhost_port";
+                                       val == "printhost_cafile" || val == "printhost_user" || val == "printhost_password" || val == "printhost_port" ||
+                                       val == "oidc_scope";
                               }),
                keys.end());
     cfg.apply_only(combined_config, keys, true);
@@ -4145,7 +4146,8 @@ static std::vector<std::string> s_PhysicalPrinter_opts {
     // HTTP digest authentization (RFC 2617)
     "printhost_user",
     "printhost_password",
-    "printhost_ssl_ignore_revoke"
+    "printhost_ssl_ignore_revoke",
+    "oidc_scope"
 };
 
 const std::vector<std::string>& PhysicalPrinter::printer_options()

@@ -97,15 +97,21 @@ public:
 
     LoadPrinterViewEvent(const LoadPrinterViewEvent& event)
         : wxCommandEvent(event)
-        { m_APIkey = event.m_APIkey; }
+        { m_APIkey = event.m_APIkey; m_oauth_token = event.m_oauth_token; }
 
     const wxString& GetAPIkey() const { return m_APIkey; }
     void SetAPIkey(const wxString& apikey) { m_APIkey = apikey; }
+
+    // Bearer token for an OIDC-type print host, injected into the webview's fetch() calls the
+    // same way GetAPIkey()/SetAPIkey() is for an X-API-Key host - see PrinterWebView::SendOAuthToken.
+    const wxString& GetOAuthToken() const { return m_oauth_token; }
+    void SetOAuthToken(const wxString& oauth_token) { m_oauth_token = oauth_token; }
 
     virtual wxEvent *Clone() const wxOVERRIDE { return new LoadPrinterViewEvent(*this); }
 
 private:
     wxString m_APIkey;
+    wxString m_oauth_token;
 
 };
 }

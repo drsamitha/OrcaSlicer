@@ -11,6 +11,7 @@
 
 #include <libslic3r/enum_bitmask.hpp>
 #include "Http.hpp"
+#include "slic3r/GUI/Jobs/OAuthJob.hpp"
 #include <map>
 class wxArrayString;
 
@@ -93,6 +94,17 @@ public:
     virtual bool is_logged_in() const { return false; }
     virtual void log_out() const {}
     virtual bool get_login_url(wxString& auth_url) const { return false; }
+
+    // Support for Authorization Code + PKCE hosts (SimplyPrint, OidcPrintHost). A host that
+    // returns true here gets its get_oauth_params()/save_oauth_credential() driven through the
+    // shared OAuthDialog/OAuthJob flow by the Physical Printer "Test" button, instead of needing
+    // a host-specific dynamic_cast at the call site.
+    virtual bool is_pkce_oauth() const { return false; }
+    virtual GUI::OAuthParams get_oauth_params() const { return GUI::OAuthParams(); }
+    virtual void save_oauth_credential(const GUI::OAuthResult& result) const {}
+    // The current bearer access token, if any - used to inject Authorization headers into an
+    // embedded Device-tab webview (PrinterWebView::SendOAuthToken). Empty for non-OAuth hosts.
+    virtual std::string get_access_token() const { return std::string(); }
 
 protected:
     virtual wxString format_error(const std::string &body, const std::string &error, unsigned status) const;

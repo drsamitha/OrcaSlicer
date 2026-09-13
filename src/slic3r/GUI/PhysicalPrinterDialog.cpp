@@ -227,14 +227,14 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
                 result = host->test(msg);
 
                 if (!result && host->is_cloud()) {
-                    if (const auto h = dynamic_cast<SimplyPrint*>(host.get()); h) {
-                        OAuthDialog dlg(this, h->get_oauth_params());
+                    if (host->is_pkce_oauth()) {
+                        OAuthDialog dlg(this, host->get_oauth_params());
                         dlg.ShowModal();
 
                         const auto& r = dlg.get_result();
                         result = r.success;
                         if (r.success) {
-                            h->save_oauth_credential(r);
+                            host->save_oauth_credential(r);
                         } else {
                             msg = r.error_message;
                         }
@@ -326,6 +326,10 @@ void PhysicalPrinterDialog::build_printhost_settings(ConfigOptionsGroup* m_optgr
     m_optgroup->append_single_option_line("printhost_authorization_type");
 
     option = m_optgroup->get_option("printhost_apikey");
+    option.opt.width = Field::def_width_wider();
+    m_optgroup->append_single_option_line(option);
+
+    option = m_optgroup->get_option("oidc_scope");
     option.opt.width = Field::def_width_wider();
     m_optgroup->append_single_option_line(option);
 
@@ -604,6 +608,7 @@ void PhysicalPrinterDialog::update(bool printer_change)
         m_optgroup->enable_field("print_host");
         m_optgroup->show_field("print_host_webui");
         m_optgroup->hide_field("bbl_use_print_host_webui");
+        m_optgroup->hide_field("oidc_scope");
         m_optgroup->enable_field("printhost_cafile");
         m_optgroup->enable_field("printhost_ssl_ignore_revoke");
         if (m_printhost_cafile_browse_btn)
@@ -695,7 +700,33 @@ void PhysicalPrinterDialog::update(bool printer_change)
                 }
                 m_optgroup->hide_field("print_host_webui");
                 m_optgroup->hide_field("printhost_apikey");
-            } 
+            } else if (opt->value == htOidc) {
+                // The backend base URL is a deployment-wide setting (one printer-manager backend
+                // serving every OIDC-type profile), stored in AppConfig rather than per-profile -
+                // each profile only varies by which oidc_scope it requests from that one backend.
+                const std::string backend_url = wxGetApp().app_config->get("oidc_backend_url");
+                if (Field* printhost_field = m_optgroup->get_field("print_host"); printhost_field) {
+                    printhost_field->disable();
+                    if (wxTextCtrl* temp = dynamic_cast<TextCtrl*>(printhost_field)->text_ctrl(); temp) {
+                        temp->SetValue(backend_url);
+                    }
+                    m_config->opt_string("print_host") = backend_url;
+                }
+                if (!backend_url.empty() && m_config->opt_string("print_host_webui").empty()) {
+                    if (Field* printhost_webui_field = m_optgroup->get_field("print_host_webui"); printhost_webui_field) {
+                        if (wxTextCtrl* temp = dynamic_cast<TextCtrl*>(printhost_webui_field)->text_ctrl(); temp) {
+                            temp->SetValue(backend_url + "/device");
+                        }
+                    }
+                    m_config->opt_string("print_host_webui") = backend_url + "/device";
+                }
+                m_optgroup->show_field("oidc_scope");
+                m_optgroup->hide_field("printhost_apikey");
+                m_optgroup->disable_field("printhost_cafile");
+                m_optgroup->disable_field("printhost_ssl_ignore_revoke");
+                if (m_printhost_cafile_browse_btn)
+                    m_printhost_cafile_browse_btn->Disable();
+            }
         }
         
         if (opt->value == htFlashforge) {
@@ -710,6 +741,7 @@ void PhysicalPrinterDialog::update(bool printer_change)
         m_optgroup->set_value("host_type", int(PrintHostType::htOctoPrint), false);
         m_optgroup->hide_field("host_type");
         m_optgroup->hide_field("flashforge_serial_number");
+        m_optgroup->hide_field("oidc_scope");
 
         m_optgroup->show_field("printhost_authorization_type");
 
@@ -802,7 +834,7 @@ void PhysicalPrinterDialog::on_dpi_changed(const wxRect& suggested_rect)
 
 void PhysicalPrinterDialog::check_host_key_valid()
 {
-    std::vector<std::string> keys = {"print_host", "print_host_webui", "printhost_apikey", "flashforge_serial_number", "printhost_cafile", "printhost_user", "printhost_password", "printhost_port"};
+    std::vector<std::string> keys = {"print_host", "print_host_webui", "printhost_apikey", "flashforge_serial_number", "printhost_cafile", "printhost_user", "printhost_password", "printhost_port", "oidc_scope"};
     for (auto &key : keys) {
         auto it = m_config->option<ConfigOptionString>(key);
         if (!it) m_config->set_key_value(key, new ConfigOptionString(""));

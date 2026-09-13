@@ -94,7 +94,7 @@ OidcPrintHost::OidcPrintHost(DynamicPrintConfig* config)
     : m_backend_url(config->opt_string("print_host"))
     , m_scope(config->opt_string("oidc_scope"))
 {
-    m_client_id = wxGetApp().app_config->get("oidc_client_id");
+    m_client_id = GUI::wxGetApp().app_config->get("oidc_client_id");
     if (m_client_id.empty())
         m_client_id = DEFAULT_CLIENT_ID;
 
